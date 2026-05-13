@@ -1,0 +1,215 @@
+openapi: 3.1.0
+info:
+  title: IC Ratings MCP Server
+  version: 1.0.0
+  description: >
+    MCP server exposing the search_contractors tool for the IC Ratings ChatGPT App.
+    All endpoints require a Bearer JWT token containing the user's email address.
+
+servers:
+  - url: https://your-deployment.railway.app
+    description: Production
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT signed with JWT_SECRET, containing { "email": "user@company.com" }
+
+  schemas:
+    Filters:
+      type: object
+      properties:
+        trade:
+          type: string
+          example: Electrician
+        location_state:
+          type: string
+          example: MO
+        location_city:
+          type: string
+        min_daily_rate:
+          type: number
+        max_daily_rate:
+          type: number
+        available_on:
+          type: string
+          format: date
+        min_rating_overall:
+          type: number
+          minimum: 1
+          maximum: 5
+        active:
+          type: boolean
+          default: true
+        willing_to_travel:
+          type: boolean
+        has_1099:
+          type: boolean
+        skills:
+          type: array
+          items:
+            type: string
+        industries:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        provider:
+          type: string
+          enum: [openai, claude]
+          default: openai
+        query:
+          type: string
+          example: Find aerospace electricians in Missouri under $600/day
+        filters:
+          $ref: '#/components/schemas/Filters'
+
+    ReviewExcerpt:
+      type: object
+      properties:
+        excerpt:
+          type: string
+        rating_overall:
+          type: number
+
+    MatchResult:
+      type: object
+      properties:
+        rank:
+          type: integer
+        confidence:
+          type: integer
+          description: 80-100 strong, 50-79 partial, <50 eliminated
+        reasoning:
+          type: string
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        trade:
+          type: string
+        location:
+          type: string
+        daily_rate:
+          type: number
+        avg_rating:
+          type: number
+          nullable: true
+        review_count:
+          type: integer
+        willing_to_travel:
+          type: boolean
+        has_1099:
+          type: boolean
+        skills:
+          type: array
+          items:
+            type: string
+        certifications:
+          type: array
+          items:
+            type: string
+        languages:
+          type: array
+          items:
+            type: string
+        relevant_reviews:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReviewExcerpt'
+
+    SearchOutput:
+      type: object
+      properties:
+        summary:
+          type: string
+        total_in_pool:
+          type: integer
+        strong_matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchResult'
+        partial_matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/MatchResult'
+        eliminated:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                type: integer
+              confidence:
+                type: integer
+              reasoning:
+                type: string
+              name:
+                type: string
+              trade:
+                type: string
+              location:
+                type: string
+              daily_rate:
+                type: number
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Server is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  service:
+                    type: string
+                  version:
+                    type: string
+
+  /mcp:
+    post:
+      summary: MCP endpoint (used by ChatGPT App)
+      description: >
+        Implements the Model Context Protocol over HTTP.
+        ChatGPT sends tool invocations here; the server routes them to the
+        search_contractors tool and returns structured JSON results.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: MCP protocol message
+      responses:
+        '200':
+          description: MCP response (tool result or error)
+        '401':
+          description: Missing authorization token
+        '403':
+          description: Invalid token or email not registered

@@ -5,6 +5,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { verifyToken } from './auth/verifyToken.js'
 import { checkUserAccess } from './auth/checkUserAccess.js'
 import { registerSearchContractorsTool } from './tools/search_contractors.js'
+import { runSearchPipeline } from './search/pipeline.js'
 
 const app = express()
 app.use(express.json({ limit: '1mb' }))
@@ -55,6 +56,38 @@ app.post('/mcp', async (req, res) => {
     if (!res.headersSent) {
       res.status(500).json({ error: 'Internal server error' })
     }
+  }
+})
+
+app.post('/search', async (req, res) => {
+  const authHeader = req.headers.authorization
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+
+  if (!token) {
+    res.status(401).json({ error: 'Authorization token required' })
+    return
+  }
+
+  try {
+    const payload = verifyToken(token)
+    await checkUserAccess(payload.email)
+  } catch (err) {
+    res.status(403).json({ error: (err as Error).message })
+    return
+  }
+
+  const { query, filters, provider = 'openai' } = req.body
+  if (!query || typeof query !== 'string') {
+    res.status(400).json({ error: 'query is required' })
+    return
+  }
+
+  try {
+    const result = await runSearchPipeline({ query, filters, provider })
+    res.json(result)
+  } catch (err) {
+    console.error('[search error]', err)
+    res.status(500).json({ error: 'Search failed' })
   }
 })
 

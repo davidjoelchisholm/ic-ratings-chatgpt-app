@@ -7,7 +7,7 @@ info:
     All endpoints require a Bearer JWT token containing the user's email address.
 
 servers:
-  - url: https://your-deployment.railway.app
+  - url: https://ic-ratings-chatgpt-app-production.up.railway.app
     description: Production
 
 security:

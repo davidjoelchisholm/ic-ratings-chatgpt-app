@@ -10,5 +10,5 @@ if (!url || !key) {
 
 export const supabase = createClient(url, key, {
   auth: { persistSession: false },
-  realtime: { transport: ws },
+  realtime: { transport: ws as any },
 })

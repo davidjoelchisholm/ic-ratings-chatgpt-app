@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: IC Ratings Contractor Search
   version: 1.0.0
@@ -13,6 +13,66 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    SearchResult:
+      type: object
+      properties:
+        summary:
+          type: string
+        total_in_pool:
+          type: integer
+        strong_matches:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                type: integer
+              confidence:
+                type: integer
+              reasoning:
+                type: string
+              name:
+                type: string
+              trade:
+                type: string
+              location:
+                type: string
+              daily_rate:
+                type: number
+              avg_rating:
+                type: number
+              review_count:
+                type: integer
+              willing_to_travel:
+                type: boolean
+              has_1099:
+                type: boolean
+              skills:
+                type: array
+                items:
+                  type: string
+              certifications:
+                type: array
+                items:
+                  type: string
+              relevant_reviews:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    excerpt:
+                      type: string
+                    rating_overall:
+                      type: number
+        partial_matches:
+          type: array
+          items:
+            type: object
+        eliminated:
+          type: array
+          items:
+            type: object
 
 security:
   - bearerAuth: []
@@ -42,16 +102,13 @@ paths:
                     - openai
                     - claude
                   default: openai
-                  description: AI provider for ranking
                 filters:
                   type: object
                   properties:
                     trade:
                       type: string
-                      example: Electrician
                     location_state:
                       type: string
-                      example: MO
                     location_city:
                       type: string
                     min_daily_rate:
@@ -91,7 +148,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/SearchResult'
         '401':
           description: Missing or invalid token
         '403':

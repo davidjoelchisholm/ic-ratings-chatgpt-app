@@ -1,5 +1,19 @@
 import { supabase } from './client.js'
 
+const STATE_ABBR: Record<string, string> = {
+  alabama: 'AL', alaska: 'AK', arizona: 'AZ', arkansas: 'AR', california: 'CA',
+  colorado: 'CO', connecticut: 'CT', delaware: 'DE', florida: 'FL', georgia: 'GA',
+  hawaii: 'HI', idaho: 'ID', illinois: 'IL', indiana: 'IN', iowa: 'IA',
+  kansas: 'KS', kentucky: 'KY', louisiana: 'LA', maine: 'ME', maryland: 'MD',
+  massachusetts: 'MA', michigan: 'MI', minnesota: 'MN', mississippi: 'MS', missouri: 'MO',
+  montana: 'MT', nebraska: 'NE', nevada: 'NV', 'new hampshire': 'NH', 'new jersey': 'NJ',
+  'new mexico': 'NM', 'new york': 'NY', 'north carolina': 'NC', 'north dakota': 'ND',
+  ohio: 'OH', oklahoma: 'OK', oregon: 'OR', pennsylvania: 'PA', 'rhode island': 'RI',
+  'south carolina': 'SC', 'south dakota': 'SD', tennessee: 'TN', texas: 'TX', utah: 'UT',
+  vermont: 'VT', virginia: 'VA', washington: 'WA', 'west virginia': 'WV',
+  wisconsin: 'WI', wyoming: 'WY',
+}
+
 export interface Filters {
   trade?: string
   location_state?: string
@@ -66,8 +80,12 @@ export async function fetchFilteredContractors(filters: Filters): Promise<Contra
     `)
     .eq('active', activeFilter)
 
-  if (filters.trade) query = query.eq('trade', filters.trade)
-  if (filters.location_state) query = query.eq('location_state', filters.location_state)
+  if (filters.trade) query = query.ilike('trade', filters.trade)
+  if (filters.location_state) {
+    const state = filters.location_state.trim()
+    const normalized = state.length === 2 ? state.toUpperCase() : STATE_ABBR[state.toLowerCase()] ?? state
+    query = query.eq('location_state', normalized)
+  }
   if (filters.location_city) query = query.ilike('location_city', filters.location_city)
   if (filters.min_daily_rate != null) query = query.gte('daily_rate', filters.min_daily_rate)
   if (filters.max_daily_rate != null) query = query.lte('daily_rate', filters.max_daily_rate)
